@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Get Notes From Strangers</title>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#fdf6f0,#fde2e4);
+  color:#4a4a4a;
+}
+header{text-align:center;padding:35px 20px}
+header h1{margin:0;color:#e76f51}
+.container{max-width:650px;margin:auto;padding:20px}
+.page{display:none;animation:fade .4s ease}
+.page.active{display:block}
+@keyframes fade{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:none}
+}
+.box{
+  background:#fff;
+  padding:25px;
+  border-radius:18px;
+  box-shadow:0 10px 25px rgba(0,0,0,.08);
+  margin-bottom:20px
+}
+button{
+  background:#e76f51;
+  color:#fff;
+  border:none;
+  padding:14px 30px;
+  border-radius:25px;
+  font-size:16px;
+  cursor:pointer
+}
+button.secondary{background:#aaa}
+button:disabled{background:#ccc;cursor:not-allowed}
+textarea{
+  width:100%;
+  height:110px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  padding:15px;
+  font-size:16px
+}
+.note{
+  font-size:18px;
+  min-height:70px;
+  text-align:center
+}
+.countdown{font-size:14px;color:#888;margin-top:8px}
+footer{
+  text-align:center;
+  padding:20px;
+  font-size:14px;
+  color:#888
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>💌 Get Notes From Strangers</h1>
+  <p>One note a day. One moment of kindness.</p>
+</header>
+
+<div class="container">
+
+  <!-- HOME -->
+  <div id="home" class="page active box">
+    <h3>🌷 Welcome</h3>
+    <p>Send or receive one kind note per day.</p>
+    <button onclick="go('send')">✍️ Send a Note</button><br><br>
+    <button class="secondary" onclick="go('get')">📩 Get a Note</button>
+  </div>
+
+  <!-- SEND -->
+  <div id="send" class="page box">
+    <h3>✍️ Send a Note</h3>
+    <textarea id="noteInput" placeholder="Write something kind..."></textarea>
+    <button id="sendBtn" onclick="sendNote()">Send</button>
+    <div id="sendCountdown" class="countdown"></div>
+    <br><button class="secondary" onclick="go('home')">← Home</button>
+  </div>
+
+  <!-- GET -->
+  <div id="get" class="page box">
+    <h3>📩 Get a Note</h3>
+    <div id="noteDisplay" class="note">
+      Click the button to receive today’s note 🌷
+    </div>
+    <button id="getBtn" onclick="getNote()">Get Note</button>
+    <div id="getCountdown" class="countdown"></div>
+    <br><button class="secondary" onclick="go('home')">← Home</button>
+  </div>
+
+</div>
+
+<footer>
+  👥 Total users: <span id="users">0</span><br>
+  Made with kindness 🌼
+</footer>
+
+<script>
+/* ---------- BASIC ---------- */
+const today = new Date().toDateString();
+const badWords = ["hate","kill","stupid","idiot","fuck","shit","die"];
+
+/* ---------- PAGE SWITCH ---------- */
+function go(page){
+  document.querySelectorAll('.page')
+    .forEach(p=>p.classList.remove('active'));
+  document.getElementById(page).classList.add('active');
+}
+
+/* ---------- USER COUNT ---------- */
+let users = Number(localStorage.getItem("users") || 0);
+if(!localStorage.getItem("visited")){
+  users++;
+  localStorage.setItem("users", users);
+  localStorage.setItem("visited","yes");
+}
+document.getElementById("users").textContent = users;
+
+/* ---------- HATE FILTER ---------- */
+function hasBadWord(text){
+  return badWords.some(w => text.toLowerCase().includes(w));
+}
+
+/* ---------- SEND ---------- */
+function sendNote(){
+  if(localStorage.getItem("lastSendDate") === today){
+    alert("You already sent a note today 🌙");
+    return;
+  }
+  const text = noteInput.value.trim();
+  if(!text) return;
+
+  if(hasBadWord(text)){
+    alert("Please avoid hateful or harmful language 💗");
+    return;
+  }
+
+  let notes = JSON.parse(localStorage.getItem("notes")) || [];
+  notes.push(text);
+  localStorage.setItem("notes", JSON.stringify(notes));
+  localStorage.setItem("lastSendDate", today);
+
+  sendBtn.disabled = true;
+  noteInput.value = "";
+  alert("Your note has been sent 💌");
+}
+
+/* ---------- GET ---------- */
+function getNote(){
+  if(localStorage.getItem("lastGetDate") === today){
+    noteDisplay.textContent =
+      "You already received today’s note 🌙";
+    return;
+  }
+
+  let notes = JSON.parse(localStorage.getItem("notes")) || [];
+  if(notes.length === 0){
+    noteDisplay.textContent =
+      "No notes right now… 🌷";
+    return;
+  }
+
+  const i = Math.floor(Math.random()*notes.length);
+  noteDisplay.textContent = notes[i];
+
+  notes.splice(i,1); // ลบหลังอ่าน
+  localStorage.setItem("notes", JSON.stringify(notes));
+  localStorage.setItem("lastGetDate", today);
+  getBtn.disabled = true;
+}
+
+/* ---------- COUNTDOWN ---------- */
+function timeLeft(){
+  const now = new Date();
+  const tomorrow = new Date();
+  tomorrow.setHours(24,0,0,0);
+  const diff = tomorrow - now;
+  const h = Math.floor(diff/1000/60/60);
+  const m = Math.floor(diff/1000/60)%60;
+  return `${h}h ${m}m left`;
+}
+
+function updateCountdown(){
+  if(localStorage.getItem("lastSendDate") === today){
+    sendBtn.disabled = true;
+    sendCountdown.textContent = "Come back in " + timeLeft();
+  }
+  if(localStorage.getItem("lastGetDate") === today){
+    getBtn.disabled = true;
+    getCountdown.textContent = "Come back in " + timeLeft();
+    noteDisplay.textContent =
+      "You already received today’s note 🌙";
+  }
+}
+updateCountdown();
+setInterval(updateCountdown,60000);
+</script>
+
+</body>
+</html>
